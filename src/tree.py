@@ -7,7 +7,7 @@ PLAYER_CHANCE = 2
 
 def player_to_token(player):
     assert(player is not PLAYER_CHANCE)
-    return player
+    return state.TOKEN_ONE if player is PLAYER_AI else state.TOKEN_TWO
 
 class Node:
     def __init__(self, player, state, parent):
@@ -23,7 +23,7 @@ class Node:
         return self._children
 
     def probability(self): # from parent_children
-        raise NotImplementedError()
+        raise NotImplementedError() 
 
     def is_terminal(self):
         return state.is_terminal(self.state)
@@ -72,7 +72,7 @@ class AINode(ActionNode):
         super().__init__(PLAYER_AI, state, parent, roll)
 
 def initial_node(roll, player):
-    initial_state = state.initial_state()
+    initial_state = state.initial_board()
     if player == PLAYER_AI:
         return AINode(initial_state, None, roll)
     else:

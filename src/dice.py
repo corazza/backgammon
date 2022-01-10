@@ -15,7 +15,8 @@ def first_roll():
     roll = dice_roll()
     while roll[0] == roll[1]:
         roll = dice_roll()
-
+    return roll
+    
 def init():
     if len(sys.argv) > 1:
         random.seed(int(sys.argv[1]))

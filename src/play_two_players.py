@@ -12,21 +12,30 @@ player = first_player
 board = state.initial_board()
 
 while not board.is_terminal():
-    print(f'Player: {player}')
+    player_marking = state.Board.token_marking(player)
+    print(f'Player: {player_marking}')
     print(f'Roll: {roll}')
-    board.print()
-    choice = input(f'select points n OR n m:')
+    board.print(player)
+    choice = input(f'select points n OR n m OR exit: ')
+    if choice == 'exit':
+        exit()
     if ' ' in choice:
         (n, m) = choice.split(' ')
-        move = [state.BoardSource(n), state.BoardSource(m)]
-        assert(board.can_move_to(player, move[0], move[0].get_destination[0]))
-        board = state.execute_move(board, player, move[0], move[0].get_destination(roll[0]))
-        assert(board.can_move_to(player, move[1], move[1].get_destination[1]))
-        board = state.execute_move(board, player, move[1], move[1].get_destination(roll[1]))
+        (n, m) = (int(n) - 1, int(m) - 1)
+        move = [state.BoardSource(n, player), state.BoardSource(m)]
+        assert(board.can_move_to(player, move[0], move[0].get_destination(roll[0], player)))
+        board = state.execute_move(board, player, move[0], move[0].get_destination(roll[0], player))
+        assert(board.can_move_to(player, move[1], move[1].get_destination(roll[1], player)))
+        board = state.execute_move(board, player, move[1], move[1].get_destination(roll[1], player))
     else:
-        n = int(choice)
+        n = int(choice) - 1
         move = [state.BoardSource(n)]
-        assert(board.can_move_to(player, move[0], move[0].get_destination[0]))
-        board = state.execute_move(board, player, move[0], move[0].get_destination(roll[0]))
+        assert(board.can_move_to(player, move[0], move[0].get_destination(roll[0], player)))
+        board = state.execute_move(board, player, move[0], move[0].get_destination(roll[0], player))
+        move = [state.BoardSource(n+roll[0])]
+        assert(board.can_move_to(player, move[0], move[0].get_destination(roll[0], player)))
+        board = state.execute_move(board, player, move[0], move[0].get_destination(roll[0], player))
     roll = dice.dice_roll()
     player = state.Board.opponent_token(player)
+
+# TODO here movement is in the negative direction!

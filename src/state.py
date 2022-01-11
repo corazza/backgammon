@@ -3,12 +3,6 @@ import copy
 NUM_POINTS = 24
 NUM_CHECKERS = 15
 
-def initial_fill(points):
-    points[23] = 2
-    points[7] = 3
-    points[12] = 5
-    points[5] = 5
-
 class CheckerSource:
     """A checker can come from the board or the bar"""
     CHECKER_SOURCE_KIND_BOARD = 0
@@ -16,7 +10,7 @@ class CheckerSource:
     def __init__(self, kind):
         self.kind = kind
 
-    def get_destination(self, d):
+    def get_destination(self, d, token):
         raise NotImplementedError()
 
 class BoardSource(CheckerSource):
@@ -24,23 +18,39 @@ class BoardSource(CheckerSource):
         self.point = point
         super().__init__(CheckerSource.CHECKER_SOURCE_KIND_BOARD)
     
-    def get_destination(self, d):
-        return self.point + d
+    def get_destination(self, d, token):
+        if token == Board.TOKEN_ONE:
+            destination = self.point - d 
+        elif token == Board.TOKEN_TWO:
+            destination = self.point + d
+        assert(0 <= destination <= 23)
+        return destination
 
 class BarSource(CheckerSource):
     def __init__(self):
         super().__init__(CheckerSource.CHECKER_SOURCE_KIND_BAR)
 
-    def get_destination(self, d):
-        return 24 - d
+    def get_destination(self, d, token):
+        if token == Board.TOKEN_ONE:
+            destination = 1 + d
+        elif token == Board.TOKEN_TWO:
+            destination = 24 - d
+        assert(0 <= destination <= 23)
+        return destination
 
 class Board:
     TOKEN_ONE = 0
     TOKEN_TWO = 1
     def __init__(self):
         self.points = ([0] * NUM_POINTS, [0] * NUM_POINTS)
-        initial_fill(self.points[Board.TOKEN_ONE])
-        initial_fill(self.points[Board.TOKEN_TWO])
+        self.points[Board.TOKEN_ONE][23] = 2
+        self.points[Board.TOKEN_ONE][7] = 3
+        self.points[Board.TOKEN_ONE][12] = 5
+        self.points[Board.TOKEN_ONE][5] = 5
+        self.points[Board.TOKEN_TWO][0] = 2
+        self.points[Board.TOKEN_TWO][16] = 3
+        self.points[Board.TOKEN_TWO][11] = 5
+        self.points[Board.TOKEN_TWO][18] = 5
         self.bars = (0, 0)
 
     def points_for(self, token):
@@ -89,20 +99,38 @@ class Board:
     def is_terminal(self):
         return sum(self.points[Board.TOKEN_ONE]) == 0 or sum(self.points[Board.TOKEN_TWO]) == 0
 
-    def print(self):
-        points = list()
+    def token_marking(token):
+        return 'A' if token == Board.TOKEN_ONE else 'B'
+
+    def print(self, token):
+        opponent_token = Board.opponent_token(token)
+        my_marking = Board.token_marking(token)
+        opponent_marking = Board.token_marking(opponent_token)
+        points = self.points_for(token)
+        points_to_print = ['---']*NUM_POINTS
         for i in range(0, NUM_POINTS):
-            if self.points[Board.TOKEN_ONE] > 0:
-                points.append(f'{Board.TOKEN_ONE}:{self.points[Board.TOKEN_ONE][i]}')
-            elif self.points[Board.TOKEN_TWO] > 0:
-                points.append(f'{Board.TOKEN_TWO}:{self.points[Board.TOKEN_TWO][i]}')
-            else:
-                points.append(f'---')
-        upper = ' '.join(points[NUM_POINTS/2:NUM_POINTS])
-        lower = ' '.join(points[NUM_POINTS/2:NUM_POINTS])
-        bar = f'{Board.TOKEN_ONE}:{self.bars[Board.TOKEN_TWO]} {Board.TOKEN_TWO}:{self.bars[Board.TOKEN_TWO]}'
-        print(upper)
-        print(lower)
+            if points[token][i] > 0:
+                points_to_print[i] = f'{points[token][i]}:{my_marking}'
+            if points[opponent_token][i] > 0:
+                points_to_print[i] = f'{points[opponent_token][i]}:{opponent_marking}'
+        markings_upper = [0] * int(NUM_POINTS/2)
+        markings_lower = [0] * int(NUM_POINTS/2)
+        for i in range(int(NUM_POINTS/2)):
+            markings_upper[i] = f'{i + 12 + 1} '
+            markings_lower[i] = f'{12 - i } ' if 12-i >= 9 else f' {12 - i } '
+
+        if token == Board.TOKEN_TWO:
+            (markings_upper, markings_lower) = (markings_lower, markings_upper)
+
+        markings_upper = ' '.join(markings_upper)
+        markings_lower = ' '.join(markings_lower)
+        upper = ' '.join(points_to_print[int(NUM_POINTS/2) : NUM_POINTS])
+        lower = ' '.join(reversed(points_to_print[0 : int(NUM_POINTS/2)]))
+
+        print_order = [markings_upper, upper, '|', lower, markings_lower]
+        print('\n'.join(print_order))
+
+        bar = f'{self.bars[Board.TOKEN_ONE]}:A {self.bars[Board.TOKEN_TWO]}:B'
         print(bar)
 
     def opponent_token(token):
@@ -156,8 +184,8 @@ def children_from_bearing_off(board, roll, token):
     boards_to_bear_off = list()
     for move_from in move_list:
         source = move_from[0]
-        first_dst_point = source.get_destination(d1)
-        second_dst_point = source.get_destination(d2)
+        first_dst_point = source.get_destination(d1, token)
+        second_dst_point = source.get_destination(d2, token)
         if board.can_move_to(token, source, first_dst_point):
             new_board = execute_move(board, token, source, first_dst_point)
             boards_to_bear_off.append(new_board)
@@ -197,20 +225,20 @@ def children_from_moving(board, roll, token):
     for move in move_list:
         if len(move) == 1:
             source = move[0]
-            dst_point = source.get_destination(d1+d2)
+            dst_point = source.get_destination(d1+d2, token)
             if board.can_move_to(token, source, dst_point):
                 yield execute_move(board, token, source, dst_point)
         elif len(move) == 2:
             first_source = move[0]
             second_source = move[1]
-            if board.can_move_to(token, first_source, first_source.get_destination(d1)):
-                board_new = execute_move(board, token, first_source, first_source.get_destination(d1))
-                if board_new.can_move_to(token, second_source, second_source.get_destination(d2)):
-                    yield execute_move(board_new, token, second_source, second_source.get_destination(d2))
-            if board.can_move_to(token, second_source, second_source.get_destination(d1)):
-                board_new = execute_move(board, token, second_source, second_source.get_destination(d1))
-                if board_new.can_move_to(token, first_source, first_source.get_destination(d2)):
-                    yield execute_move(board_new, token, first_source, first_source.get_destination(d2))
+            if board.can_move_to(token, first_source, first_source.get_destination(d1, token)):
+                board_new = execute_move(board, token, first_source, first_source.get_destination(d1, token))
+                if board_new.can_move_to(token, second_source, second_source.get_destination(d2, token)):
+                    yield execute_move(board_new, token, second_source, second_source.get_destination(d2, token))
+            if board.can_move_to(token, second_source, second_source.get_destination(d1, token)):
+                board_new = execute_move(board, token, second_source, second_source.get_destination(d1, token))
+                if board_new.can_move_to(token, first_source, first_source.get_destination(d2, token)):
+                    yield execute_move(board_new, token, first_source, first_source.get_destination(d2, token))
 
 def children(board, roll, token):
     yield from children_from_moving(board, roll, token)

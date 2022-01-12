@@ -1,7 +1,7 @@
 import expectiminimax as emm
-import tree
 import dice
 import state
+import IPython
 
 dice.init() # seed
 
@@ -13,29 +13,45 @@ board = state.initial_board()
 
 while not board.is_terminal():
     player_marking = state.Board.token_marking(player)
+    (d1, d2) = roll
     print(f'Player: {player_marking}')
     print(f'Roll: {roll}')
-    board.print(player)
-    choice = input(f'select points n OR n m OR exit: ')
-    if choice == 'exit':
-        exit()
-    if ' ' in choice:
-        (n, m) = choice.split(' ')
-        (n, m) = (int(n) - 1, int(m) - 1)
-        move = [state.BoardSource(n, player), state.BoardSource(m)]
-        assert(board.can_move_to(player, move[0], move[0].get_destination(roll[0], player)))
-        board = state.execute_move(board, player, move[0], move[0].get_destination(roll[0], player))
-        assert(board.can_move_to(player, move[1], move[1].get_destination(roll[1], player)))
-        board = state.execute_move(board, player, move[1], move[1].get_destination(roll[1], player))
-    else:
-        n = int(choice) - 1
-        move = [state.BoardSource(n)]
-        assert(board.can_move_to(player, move[0], move[0].get_destination(roll[0], player)))
-        board = state.execute_move(board, player, move[0], move[0].get_destination(roll[0], player))
-        move = [state.BoardSource(n+roll[0])]
-        assert(board.can_move_to(player, move[0], move[0].get_destination(roll[0], player)))
-        board = state.execute_move(board, player, move[0], move[0].get_destination(roll[0], player))
+    state.print_board(board, player)
+    chosen_once = False
+    while True:
+        if chosen_once:
+            print('ILLEGAL MOVE')
+        chosen_once = True
+        choice = input(f'input: <n> OR <n m> OR exit: ')
+        if choice == 'exit':
+            exit()
+        if ' ' in choice:
+            (n, m) = choice.split(' ')
+            (n, m) = (int(n) - 1, int(m) - 1)
+            move = [state.BoardSource(n), state.BoardSource(m)]
+            if not move[0].destination_sanity(d1, player, print_reason=True):
+                continue
+            if board.valid(player, move[0], move[0].get_destination(d1, player), print_reason=True):
+                new_board = state.move_one_checker(board, player, move[0], move[0].get_destination(d1, player), report=True)
+                if not move[1].destination_sanity(d2, player, print_reason=True):
+                    continue
+                if new_board.valid(player, move[1], move[1].get_destination(d2, player), print_reason=True):
+                    board = state.move_one_checker(new_board, player, move[1], move[1].get_destination(d2, player), report=True)
+                    break
+        else:
+            n = int(choice) - 1
+            move = [state.BoardSource(n)]
+            if not move[0].destination_sanity(d1, player, print_reason=True):
+                continue
+            if board.valid(player, move[0], move[0].get_destination(d1, player), print_reason=True):
+                new_board = state.move_one_checker(board, player, move[0], move[0].get_destination(d1, player), report=True)
+                new_move = [state.BoardSource(move[0].get_destination(d1, player))]
+                if not new_move[0].destination_sanity(d2, player, print_reason=True):
+                    continue
+                if new_board.valid(player, new_move[0], new_move[0].get_destination(d2, player), print_reason=True):
+                    board = state.move_one_checker(new_board, player, new_move[0], new_move[0].get_destination(d2, player), report=True)
+                    break
+
     roll = dice.dice_roll()
     player = state.Board.opponent_token(player)
-
-# TODO here movement is in the negative direction!
+    print('=============\n')

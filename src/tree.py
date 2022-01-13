@@ -1,15 +1,14 @@
 import state
 import dice
 
-PLAYER_AI = 0 # maybe introspection is slow?
-PLAYER_HUMAN = 1
-PLAYER_CHANCE = 2
-
 def player_to_token(player):
-    assert(player is not PLAYER_CHANCE)
-    return state.TOKEN_ONE if player is PLAYER_AI else state.TOKEN_TWO
+    assert(player is not Node.PLAYER_CHANCE)
+    return state.TOKEN_ONE if player is Node.PLAYER_AI else state.TOKEN_TWO
 
 class Node:
+    PLAYER_AI = 0 # maybe introspection is slow?
+    PLAYER_HUMAN = 1
+    PLAYER_CHANCE = 2
     def __init__(self, player, state, parent):
         self.player = player
         self.state = state
@@ -36,9 +35,17 @@ class Node:
     def _generate_children(self):
         raise NotImplementedError()
 
+    def player_marking(player):
+        if player is Node.PLAYER_AI:
+            return "AI"
+        elif player is Node.PLAYER_HUMAN:
+            return "Human"
+        elif player is Node.PLAYER_CHANCE:
+            return "Chance"
+
 class RandomNode(Node):
     def __init__(self, state, parent):
-        super().__init__(PLAYER_CHANCE, state, parent)
+        super().__init__(Node.PLAYER_CHANCE, state, parent)
     
     def probability(self):
         raise ValueError("Random nodes should never be asked for probability")
@@ -47,7 +54,7 @@ class RandomNode(Node):
         return ValueError("Random nodes cannot be terminal regardless of their state")
 
     def _generate_children(self):
-        if self.parent.player == PLAYER_AI:
+        if self.parent.player == Node.PLAYER_AI:
             self._children = [HumanNode(self.state, self, roll) for roll in dice.all_rolls()]
         else:
             self._children = [AINode(self.state, self, roll) for roll in dice.all_rolls()]
@@ -65,15 +72,15 @@ class ActionNode(Node):
 
 class HumanNode(ActionNode):
     def __init__(self, state, parent, roll):
-        super().__init__(PLAYER_HUMAN, state, parent, roll)
+        super().__init__(Node.PLAYER_HUMAN, state, parent, roll)
 
 class AINode(ActionNode):
     def __init__(self, state, parent, roll):
-        super().__init__(PLAYER_AI, state, parent, roll)
+        super().__init__(Node.PLAYER_AI, state, parent, roll)
 
 def initial_node(roll, player):
     initial_state = state.initial_board()
-    if player == PLAYER_AI:
+    if player is Node.PLAYER_AI:
         return AINode(initial_state, None, roll)
     else:
         return HumanNode(initial_state, None, roll)

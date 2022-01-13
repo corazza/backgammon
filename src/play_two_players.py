@@ -1,3 +1,4 @@
+from re import L
 import expectiminimax as emm
 import dice
 import state
@@ -13,44 +14,36 @@ board = state.initial_board()
 
 while not board.is_terminal():
     player_marking = state.Board.token_marking(player)
-    (d1, d2) = roll
     print(f'Player: {player_marking}')
     print(f'Roll: {roll}')
     state.print_board(board, player)
-    chosen_once = False
-    while True:
-        if chosen_once:
-            print('ILLEGAL MOVE')
-        chosen_once = True
-        choice = input(f'input: <n> OR <n m> OR exit: ')
+    can_move = board.can_move(player)
+    while True and can_move:
+        choice = input(f'input: <n> | <n m> | bar | bar bar | exit: ')
         if choice == 'exit':
             exit()
-        if ' ' in choice:
+        elif choice == 'bar':
+            move = [state.BarSource()]
+        elif choice == 'bar bar':
+            move = [state.BarSource(), state.BarSource()]
+        elif ' ' in choice:
             (n, m) = choice.split(' ')
             (n, m) = (int(n) - 1, int(m) - 1)
             move = [state.BoardSource(n), state.BoardSource(m)]
-            if not move[0].destination_sanity(d1, player, print_reason=True):
-                continue
-            if board.valid(player, move[0], move[0].get_destination(d1, player), print_reason=True):
-                new_board = state.move_one_checker(board, player, move[0], move[0].get_destination(d1, player), report=True)
-                if not move[1].destination_sanity(d2, player, print_reason=True):
-                    continue
-                if new_board.valid(player, move[1], move[1].get_destination(d2, player), print_reason=True):
-                    board = state.move_one_checker(new_board, player, move[1], move[1].get_destination(d2, player), report=True)
-                    break
         else:
             n = int(choice) - 1
             move = [state.BoardSource(n)]
-            if not move[0].destination_sanity(d1, player, print_reason=True):
-                continue
-            if board.valid(player, move[0], move[0].get_destination(d1, player), print_reason=True):
-                new_board = state.move_one_checker(board, player, move[0], move[0].get_destination(d1, player), report=True)
-                new_move = [state.BoardSource(move[0].get_destination(d1, player))]
-                if not new_move[0].destination_sanity(d2, player, print_reason=True):
-                    continue
-                if new_board.valid(player, new_move[0], new_move[0].get_destination(d2, player), print_reason=True):
-                    board = state.move_one_checker(new_board, player, new_move[0], new_move[0].get_destination(d2, player), report=True)
-                    break
+        move_result = state.execute_move(board, player, move, roll, report=True)
+        if not move_result.success():
+            print('ILLEGAL MOVE:')
+            move_result.print_reason()
+            continue
+        else:
+            board = move_result.content
+            break
+
+    if not can_move:
+        print('No viable moves, forfeiting turn')
 
     roll = dice.dice_roll()
     player = state.Board.opponent_token(player)

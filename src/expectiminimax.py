@@ -1,14 +1,21 @@
-import sys
 import tree
 import state
 
+import IPython
+from profilehooks import profile
+
+BEAR_OFF_MULTIPLIER = state.NUM_POINTS + 2
+BAR_MULTIPLIER = state.NUM_POINTS + 100
+
 def heuristic_value(node):
-    if node.player == tree.Node.PLAYER_AI:
+    if node.player is tree.Node.PLAYER_CHANCE:
         node = node.parent
     token = tree.player_to_token(node.player)
+    opponent_token = state.Board.opponent_token(token)
     (my_points, opponent_points) = node.state.points_for(token)
     my_bar = node.state.bar_for(token)
-    checkers_on_board = 0
+    opponent_bar = node.state.bar_for(opponent_token)
+    checkers_on_board = sum(my_points)
     score = 0
     for i in range(state.NUM_POINTS):
         if token == state.Board.TOKEN_ONE:
@@ -16,28 +23,27 @@ def heuristic_value(node):
         elif token == state.Board.TOKEN_TWO:
             multiplier = i
         score += my_points[i] * multiplier - opponent_points[i] * (state.NUM_POINTS - multiplier)
-        checkers_on_board += my_points[i]
-    score += state.NUM_POINTS * (state.NUM_CHECKERS - checkers_on_board - my_bar) * 2
+    score += BEAR_OFF_MULTIPLIER * (state.NUM_CHECKERS - checkers_on_board - my_bar)
+    score += BAR_MULTIPLIER * (opponent_bar - my_bar)
     return score
 
-def expectiminimax(node, depth):
+# @profile(sort='tottime')
+def expectiminimax(node, depth, playing_as):
     if node.is_terminal() or depth == 0:
-        return heuristic_value(node)
-    value = None
-
-    if node.player == tree.Node.PLAYER_AI:
-        for child in node.children():
-            child_value = expectiminimax(child, depth-1)
-            value = min(value, child_value) if value is not None else child_value
-    elif node.player == tree.Node.PLAYER_HUMAN:
-        for child in node.children():
-            child_value = expectiminimax(child, depth-1)
-            value = max(value, child_value) if value is not None else child_value
-    else: # node.player == tree.Node.PLAYER_CHANCE
+        node.value = heuristic_value(node)
+    else:
         value = 0
-        for child in node.children():
-            child_value = expectiminimax(child, depth-1)
-            value = value + (child.probability() * child_value)
-
-    node.value = value
-    return value
+        if node.player == tree.Node.PLAYER_CHANCE:
+            for child in node.children():
+                child_value = expectiminimax(child, depth-1, playing_as)
+                value = value + (child.probability() * child_value)
+        elif node.player == playing_as:
+            for child in node.children():
+                child_value = expectiminimax(child, depth-1, playing_as)
+                value = max(value, child_value) if value is not None else child_value
+        elif node.player != playing_as:
+            for child in node.children():
+                child_value = expectiminimax(child, depth-1, playing_as)
+                value = min(value, child_value) if value is not None else child_value
+        node.value = value
+    return node.value

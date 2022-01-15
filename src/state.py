@@ -1,7 +1,6 @@
 from hashlib import new
 from operator import concat
 import IPython
-import copy
 import itertools
 
 from result import *
@@ -66,7 +65,11 @@ class Board:
     TOKEN_ONE = 0
     TOKEN_TWO = 1
     def __init__(self):
-        self.points = ([0] * NUM_POINTS, [0] * NUM_POINTS)
+        self.points = [None, None]
+        self.bars = [None, None]
+
+    def fill_initial(self):
+        self.points = [[0] * NUM_POINTS, [0] * NUM_POINTS]
         self.points[Board.TOKEN_ONE][23] = 2
         self.points[Board.TOKEN_ONE][7] = 3
         self.points[Board.TOKEN_ONE][12] = 5
@@ -76,6 +79,14 @@ class Board:
         self.points[Board.TOKEN_TWO][11] = 5
         self.points[Board.TOKEN_TWO][18] = 5
         self.bars = [0, 0]
+
+    def copy(self):
+        board = Board()
+        board.bars[0] = self.bars[0]
+        board.bars[1] = self.bars[1]
+        board.points[0] = self.points[0].copy()
+        board.points[1] = self.points[1].copy()
+        return board
 
     def points_for(self, token):
         if token == Board.TOKEN_ONE:
@@ -156,7 +167,9 @@ class Board:
         return (token+1) % 2
 
 def initial_board():
-    return Board()
+    board = Board()
+    board.fill_initial()
+    return board
 
 def move_generator_double(points, make_source):
     num_points = len(points)
@@ -180,7 +193,7 @@ def move_generator_single(points, make_source):
 
 def move_one_checker(board, token, source, destination, report=False):
     report_source = None
-    new_board = copy.deepcopy(board)
+    new_board = board.copy()
     (my_points, opponent_points) = new_board.points_for(token)
     if source.kind == CheckerSource.CHECKER_SOURCE_KIND_BOARD:
         src_point = source.point
@@ -216,14 +229,13 @@ def move_one_checker(board, token, source, destination, report=False):
 
 def execute_move(board, token, move, roll, report=False):
     (d1, d2) = roll
-    (higher, lower) = (max(d1, d2), min(d1, d2))
     my_bar = board.bar_for(token)
     if len(move) == 1:
         source = move[0]
         assert(source.kind == CheckerSource.CHECKER_SOURCE_KIND_BAR or my_bar == 0)
-        dst_point_result_both = board.get_destination(token, source, higher+lower)
-        dst_point_result_higher = board.get_destination(token, source, higher)
-        dst_point_result_lower = board.get_destination(token, source, lower)
+        dst_point_result_both = board.get_destination(token, source, d1+d2)
+        dst_point_result_higher = board.get_destination(token, source, d2)
+        dst_point_result_lower = board.get_destination(token, source, d1)
         both_result = dst_point_result_both.on_content(lambda destination: move_one_checker(board, token, source, destination, report=False))
         higher_result = dst_point_result_higher.on_content(lambda destination: move_one_checker(board, token, source, destination, report=False))
         lower_result = dst_point_result_lower.on_content(lambda destination: move_one_checker(board, token, source, destination, report=False))

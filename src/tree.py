@@ -29,8 +29,9 @@ class Node:
         return self.state.is_terminal()
     
     def deleteTree(self):
-        for child in self._children:
-            child.deleteTree()
+        if self._children is not None:
+            for child in self._children:
+                child.deleteTree()
             self._children = None
 
     def _generate_children(self):
@@ -66,7 +67,7 @@ class ActionNode(Node):
         super().__init__(player, state, parent, move)
     
     def probability(self):
-        return 1.0 / len(self.parent.children())
+        return 1.0 / dice.ROLLS_N
 
     def _generate_children(self):
         self._children = list()

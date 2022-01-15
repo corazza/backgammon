@@ -6,7 +6,7 @@ from result import *
 
 import IPython
 
-EMM_DEPTH = 5
+EMM_DEPTH = 4
 
 dice.init() # seed
 
@@ -22,10 +22,8 @@ def play(player_one_ai, player_two_ai):
 
         if player is Node.PLAYER_CHANCE:
             new_roll = dice.disregard_order(dice.dice_roll())
-            if current_node.parent.player == Node.PLAYER_TWO:
-                current_node = HumanNode(board, None, new_roll, None)
-            else:
-                current_node = AINode(board, None, new_roll, None)
+            opponent = current_node.opponent()
+            current_node = ActionNode(opponent, board, None, new_roll, None)
             current_node.deleteTree()
         else:
             move = None
@@ -76,6 +74,8 @@ def play(player_one_ai, player_two_ai):
                         if child.value > max_value_child.value:
                             max_value_child = child
                     move = max_value_child.move
+                if not state.execute_move(board, player, move, roll, report=False).success():
+                    IPython.embed()
                 board = state.execute_move(board, player, move, roll, report=True).content
             current_node = RandomNode(board, current_node, None)
             print('=============\n')

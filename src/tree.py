@@ -1,13 +1,14 @@
+from argparse import Action
 import state
 import dice
 
 def player_to_token(player):
     assert(player is not Node.PLAYER_CHANCE)
-    return state.Board.TOKEN_ONE if player is Node.PLAYER_TWO else state.Board.TOKEN_TWO
+    return state.Board.TOKEN_ONE if player is Node.PLAYER_ONE else state.Board.TOKEN_TWO
 
 class Node:
-    PLAYER_TWO = 0 # maybe introspection is slow?
-    PLAYER_ONE = 1
+    PLAYER_ONE = 0 # maybe introspection is slow?
+    PLAYER_TWO = 1
     PLAYER_CHANCE = 2
     def __init__(self, player, state, parent, move):
         self.player = player
@@ -24,9 +25,6 @@ class Node:
 
     def probability(self): # from parent_children
         raise NotImplementedError() 
-
-    def is_terminal(self):
-        return self.state.is_terminal()
     
     def deleteTree(self):
         if self._children is not None:
@@ -45,6 +43,9 @@ class Node:
         else:
             return "AI"
 
+    def opponent(self):
+        raise NotImplementedError()
+
 class RandomNode(Node):
     def __init__(self, state, parent, move):
         super().__init__(Node.PLAYER_CHANCE, state, parent, move)
@@ -53,19 +54,27 @@ class RandomNode(Node):
         raise ValueError("Random nodes should never be asked for probability")
 
     def is_terminal(self):
-        return False
+        return self.state.is_terminal()
+
+    def opponent(self):
+        return self.parent.opponent()
 
     def _generate_children(self):
-        if self.parent.player == Node.PLAYER_TWO:
-            self._children = [HumanNode(self.state, self, roll, self.move) for roll in dice.all_rolls()]
-        else:
-            self._children = [AINode(self.state, self, roll, self.move) for roll in dice.all_rolls()]
+        opponent = self.opponent()
+        rolls = dice.all_rolls()
+        self._children = [ActionNode(opponent, self.state, self, roll, self.move) for roll in rolls]
             
 class ActionNode(Node):
     def __init__(self, player, state, parent, roll, move):
         self.roll = roll
         super().__init__(player, state, parent, move)
     
+    def is_terminal(self):
+        return self.state.is_terminal()
+
+    def opponent(self):
+        return Node.PLAYER_ONE if self.player is Node.PLAYER_TWO else Node.PLAYER_TWO
+
     def probability(self):
         return 1.0 / 36 if self.roll[0] == self.roll[1] else 2.0 / 36
 
@@ -74,17 +83,6 @@ class ActionNode(Node):
         for (move, child) in state.children(self.state, self.roll, player_to_token(self.player)):
             self._children.append(RandomNode(child, self, move))
 
-class HumanNode(ActionNode):
-    def __init__(self, state, parent, roll, move):
-        super().__init__(Node.PLAYER_ONE, state, parent, roll, move)
-
-class AINode(ActionNode):
-    def __init__(self, state, parent, roll, move):
-        super().__init__(Node.PLAYER_TWO, state, parent, roll, move)
-
 def initial_node(roll, player):
     initial_state = state.initial_board()
-    if player is Node.PLAYER_TWO:
-        return AINode(initial_state, None, roll, None)
-    else:
-        return HumanNode(initial_state, None, roll, None)
+    return ActionNode(player, initial_state, None, roll, None)

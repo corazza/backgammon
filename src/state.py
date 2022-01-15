@@ -135,11 +135,10 @@ class Board:
             return source.get_board_destination(d, token).on_content(lambda point: Success(BoardDestination(point)))
 
     def can_move(self, token, roll):
-        # for move in self.board_move_generator(token):
-        #     if execute_move(self, token, move, roll).success():
-        #         return True
-        # return False
-        return peek(children(self, roll, token)) is not None
+        move_child_pair = peek(children(self, roll, token))
+        if move_child_pair is not None:
+            return len(move_child_pair[0][0]) > 0
+        return False
 
     def bar_empty_for(self, token):
         return self.bar_for(token) == 0
@@ -262,10 +261,14 @@ def execute_move(board, token, move, roll, report=False):
         return Failure("move has to be [source] or [source source]")
 
 def children(board, roll, token):
+    had_success = False
     for move in board.board_move_generator(token):
         new_board = execute_move(board, token, move, roll)
         if new_board.success():
+            had_success = True
             yield (move, new_board.content)
+    if not had_success:
+        yield ([], board)
 
 def print_board(board, token):
     opponent_token = Board.opponent_token(token)

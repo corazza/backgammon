@@ -67,7 +67,7 @@ class ActionNode(Node):
         super().__init__(player, state, parent, move)
     
     def probability(self):
-        return 1.0 / dice.ROLLS_N
+        return 1.0 / 36 if self.roll[0] == self.roll[1] else 2.0 / 36
 
     def _generate_children(self):
         self._children = list()

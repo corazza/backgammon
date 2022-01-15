@@ -6,7 +6,7 @@ from result import *
 
 import IPython
 
-EMM_DEPTH = 4
+EMM_DEPTH = 5
 
 dice.init() # seed
 

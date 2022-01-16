@@ -40,7 +40,7 @@ def play(player_one_ai, player_two_ai):
                 print('No viable moves, forfeiting turn')
             else:
                 if input_move:
-                    choices = []
+                    choices = list()
                     while len(choices) == 0 or (move_twice and len(choices) == 1):
                         choice = input(f'input: <n> | <n m> | bar | bar bar | exit: ')
                         if choice == 'exit':
@@ -58,14 +58,14 @@ def play(player_one_ai, player_two_ai):
                             choices.append([state.BoardSource(n)])
                         move_result = Success()
                         for choice in choices:
-                            move_result = move_result.next(state.execute_move(board, player, choice, roll, report=True))
+                            move_result = move_result.next(state.execute_move(board, player, choice, roll, report=False))
                         if not move_result.success():
                             print('ILLEGAL MOVE:')
                             print(move)
                             move_result.print_reason()
                             continue
                         else:
-                            chosen = True
+                            move = choices[0]
                 else:
                     expectiminimax(current_node, EMM_DEPTH, current_node.player)
                     children = current_node.children()

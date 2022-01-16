@@ -6,7 +6,6 @@ import IPython
 from profilehooks import profile
 import math
 
-BAR_MULTIPLIER = 2*math.log(state.NUM_POINTS+1, 2)
 BEAR_OFF_MULTIPLIER = 3*math.log(state.NUM_POINTS+1, 2)
 
 def score_for(node, token):
@@ -21,7 +20,6 @@ def score_for(node, token):
             multiplier = i+1
         score += my_points[i] * math.log(multiplier, 2)
     score += BEAR_OFF_MULTIPLIER * (state.NUM_CHECKERS - checkers_on_board - my_bar)
-    score -= BAR_MULTIPLIER * my_bar
     return score
 
 def heuristic_value(node):
